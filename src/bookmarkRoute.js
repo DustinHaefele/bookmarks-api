@@ -7,12 +7,15 @@ const bookmarkRouter = express.Router();
 
 bookmarkRouter
   .get('/', (req, res) => {
-    //Any Validation??
     res.json(bookmarks);
+  })
+  .post('/', (req, res) => {
+    const { title, url, rating, description } = req.body;
+    const myRating = parseInt(rating);
+    const newBookmark = { title, url, rating: myRating, description, id: uuid() };
+    bookmarks.push(newBookmark);
+    res.status(201).json(newBookmark);
   });
-//   .post((req, res) => {
-//     //FUNCTIONALITY
-//   });
 
 // bookmarkRouter.delete('/:id', (req, res) => {
 //   //FUNCTIONALITY
