@@ -4,6 +4,7 @@ const morgan = require('morgan');
 const cors = require('cors');
 const helmet = require('helmet');
 const { NODE_ENV } = require('./config');
+
 const bookmarkRoute = require('./bookmarkRoute');
 
 const app = express();
@@ -15,7 +16,7 @@ app.use(cors());
 app.use(helmet());
 app.use(express.json());
 
-app.use('/', bookmarkRoute);
+app.use(bookmarkRoute);
 
 app.use(function errorHandler(error, req, res, next){
   let response;
