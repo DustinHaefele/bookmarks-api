@@ -2,13 +2,19 @@ const express = require('express');
 const logger = require('./logger');
 const uuid = require('uuid/v4');
 const bookmarks = require('./store');
+const BookmarkService = require('./bookmark-service');
 
 const bookmarkRouter = express.Router();
 
 bookmarkRouter
   .route('/')
-  .get((req, res) => {
-    res.json(bookmarks);
+  .get((req, res, next) => {
+    const db = req.app.get('db');
+    BookmarkService.getAllBookmarks(db)
+      .then(bookmarks => {
+        res.json(bookmarks);
+      })
+      .catch(next);
   })
   .post((req, res) => {
     const { title, url, rating, description } = req.body;
@@ -41,19 +47,22 @@ bookmarkRouter
     bookmarks.splice(index, 1);
     res.status(202).json(bookmarks);
   })
-  .get((req,res) => {
+  .get((req,res,next) => {
+    const db = req.app.get('db');
     const { id } = req.params;
     if (!id) {
       logger.error('No ID given');
       return res.status(400).send('Invalid data');
     }
-    const bm = bookmarks.find(b => b.id === id);
-
-    if(!bm){
-      logger.error(`No bookmark found with id ${id}`);
-      return res.status(404).send('Bookmark not found');
-    }
-    return res.status(200).json(bm);
+    BookmarkService.getById(db, id)
+      .then(bm=>{
+        if(!bm){
+          logger.error(`No bookmark found with id ${id}`);
+          return res.status(404).send('Bookmark not found');
+        }
+        return res.status(200).json(bm);
+      })
+      .catch(next);
   });
 
 module.exports = bookmarkRouter;
