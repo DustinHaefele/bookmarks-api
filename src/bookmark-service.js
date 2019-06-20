@@ -9,8 +9,21 @@ const BookmarkServices = {
   getById(db, id){
     return db('bookmarks')
       .where( { id } )
-      .returning()
+      .returning('*')
       .first();
+  },
+
+  deleteBookmark(db, id){
+    return db('bookmarks')
+      .where({ id })
+      .delete();
+  },
+
+  insertBookmark(db, newBm){
+    return db('bookmarks')
+      .insert(newBm)
+      .returning('*')
+      .then(res=>res[0]);
   }
 };
 

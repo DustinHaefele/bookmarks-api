@@ -1,10 +1,18 @@
 const express = require('express');
 const logger = require('./logger');
-const uuid = require('uuid/v4');
-const bookmarks = require('./store');
+const xss = require('xss');
 const BookmarkService = require('./bookmark-service');
 
 const bookmarkRouter = express.Router();
+const jsonParser = express.json();
+
+const safeBookmark = article => ({
+  id: article.id,
+  title: xss(article.title),
+  description: xss(article.description),
+  rating: article.rating,
+  url: xss(article.url)
+});
 
 bookmarkRouter
   .route('/')
@@ -12,42 +20,50 @@ bookmarkRouter
     const db = req.app.get('db');
     BookmarkService.getAllBookmarks(db)
       .then(bookmarks => {
-        res.json(bookmarks);
+        res.json(bookmarks.map(safeBookmark));
       })
       .catch(next);
   })
-  .post((req, res) => {
+  .post(jsonParser, (req, res, next) => {
+    const db = req.app.get('db');
     const { title, url, rating, description } = req.body;
-    if (!title || !url || !rating) {
-      logger.error('invalid bookmark');
-      return res.status(400).json({ message: 'Invalid Input' });
-    }
     const myRating = parseInt(rating);
-
     const newBookmark = {
       title,
       url,
       rating: myRating,
-      description,
-      id: uuid()
+      description
     };
-    bookmarks.push(newBookmark);
-    res.status(201).json(newBookmark);
+    if (!title || !url || !rating || rating > 5 || rating < 1) {
+      logger.error('invalid bookmark');
+      return res.status(400).json({ message: 'Invalid Input' });
+    }
+    //Getting a 500 internal error or a can't set headers after they are already set.
+    BookmarkService.insertBookmark(db, newBookmark)
+      .then(bm => {
+        res.status(201).json(safeBookmark(bm));
+      })
+      .catch(next);
   });
 
 bookmarkRouter
   .route('/:id')
-  .delete((req, res) => {
+
+  .delete((req, res, next) => {
+    const db = req.app.get('db');
     const { id } = req.params;
     if (!id) {
       logger.error('Invalid bookmark id');
       return res.status(400).send('Invalid data');
     }
-    const index = bookmarks.findIndex(b => b.id === id);
-    bookmarks.splice(index, 1);
-    res.status(202).json(bookmarks);
+    BookmarkService.deleteBookmark(db, id)
+      .then(bm => {
+        res.status(204).end();
+      })
+      .catch(next);
   })
-  .get((req,res,next) => {
+
+  .get((req, res, next) => {
     const db = req.app.get('db');
     const { id } = req.params;
     if (!id) {
@@ -55,12 +71,12 @@ bookmarkRouter
       return res.status(400).send('Invalid data');
     }
     BookmarkService.getById(db, id)
-      .then(bm=>{
-        if(!bm){
+      .then(bm => {
+        if (!bm) {
           logger.error(`No bookmark found with id ${id}`);
           return res.status(404).send('Bookmark not found');
         }
-        return res.status(200).json(bm);
+        return res.status(200).json(safeBookmark(bm));
       })
       .catch(next);
   });
