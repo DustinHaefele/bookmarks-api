@@ -31,7 +31,7 @@ app.use(express.json());
 
 
 
-app.use('/bookmarks', bookmarkRoute);
+app.use('/api/bookmarks', bookmarkRoute);
 
 app.use(function errorHandler(error, req, res, next){
   let response;

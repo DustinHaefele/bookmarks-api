@@ -38,7 +38,7 @@ bookmarkRouter
       logger.error('invalid bookmark');
       return res.status(400).json({ message: 'Invalid Input' });
     }
-    //Getting a 500 internal error or a can't set headers after they are already set.
+    
     BookmarkService.insertBookmark(db, newBookmark)
       .then(bm => {
         res.status(201).json(safeBookmark(bm));
@@ -58,6 +58,9 @@ bookmarkRouter
     }
     BookmarkService.deleteBookmark(db, id)
       .then(bm => {
+        if(!bm){ 
+          return res.status(404).end();
+        }
         res.status(204).end();
       })
       .catch(next);
@@ -77,6 +80,28 @@ bookmarkRouter
           return res.status(404).send('Bookmark not found');
         }
         return res.status(200).json(safeBookmark(bm));
+      })
+      .catch(next);
+  })
+  .patch(jsonParser, (req,res,next)=>{
+    const db = req.app.get('db');
+    const{title, url, description, rating} = req.body;
+    const { id } = req.params;
+   
+
+    const updatedData = {title, url, description,rating};
+
+    if(!id || (!title && !url && !description && (!rating || rating < 1 || rating > 5)) ){
+      logger.error(`No valid keys provided on ${updatedData}`);
+      return res.status(400).send({error:{message:'Body must contain valid keys'}})
+    }
+
+    BookmarkService.updateBookmark(db,id,updatedData)
+      .then(bm=>{
+        if(!bm){
+          return res.status(404).end();
+        }
+        return res.status(204).end();
       })
       .catch(next);
   });

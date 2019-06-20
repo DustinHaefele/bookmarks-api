@@ -22,7 +22,12 @@ describe('Bookmark Endpoints', () => {
   context('table has data', () => {
     const testData = makeBookmarksArray();
     const seedData = testData.map(obj => {
-      return {title: obj.title, url: obj.url, description: obj.description, rating: obj.rating}
+      return {
+        title: obj.title,
+        url: obj.url,
+        description: obj.description,
+        rating: obj.rating
+      };
     });
 
     beforeEach(() => {
@@ -34,15 +39,15 @@ describe('Bookmark Endpoints', () => {
 
     it('gets all bookmarks', () => {
       return supertest(app)
-        .get('/bookmarks')
+        .get('/api/bookmarks')
         .expect(200, testData);
     });
 
-    it('gets correct bookmark at /bookmarks/:id', () => {
+    it('gets correct bookmark at /api/bookmarks/:id', () => {
       const id = 3;
       const bm = testData[id - 1];
       return supertest(app)
-        .get(`/bookmarks/${id}`)
+        .get(`/api/bookmarks/${id}`)
         .expect(200, bm);
     });
 
@@ -55,20 +60,20 @@ describe('Bookmark Endpoints', () => {
       };
 
       return supertest(app)
-        .post('/bookmarks')
+        .post('/api/bookmarks')
         .send(newBm)
         .expect(201)
         .expect(res => {
-          console.log(res.body);
+
           expect(res.body.title).to.eql(newBm.title);
           expect(res.body.url).to.eql(newBm.url);
           expect(res.body.description).to.eql(newBm.description);
           expect(res.body.rating).to.eql(newBm.rating);
         })
         .then(postRes => {
-          console.log(postRes.body);
+
           return supertest(app)
-            .get(`/bookmarks/${postRes.body.id}`)
+            .get(`/api/bookmarks/${postRes.body.id}`)
             .expect(postRes.body);
         });
     });
@@ -77,26 +82,89 @@ describe('Bookmark Endpoints', () => {
       const id = 3;
       const expected = testData.filter(bm => bm.id !== id);
       return supertest(app)
-        .delete(`/bookmarks/${id}`)
+        .delete(`/api/bookmarks/${id}`)
         .expect(204)
         .then(() => {
           return supertest(app)
-            .get('/bookmarks')
+            .get('/api/bookmarks')
             .then(res => {
               expect(res.body).to.eql(expected);
             });
         });
     });
 
-//GETTING A ECONNREFUSED MESSAGE HERE NOT SURE WHAT THAT MEANS
-
-    it.skip('DELETE return 404 not found if id not present', () => {
+    it('DELETE return 404 not found if id not present', () => {
       const id = 123424;
       return supertest(app)
-        .delete(`bookmarks/${id}`)
+        .delete(`/api/bookmarks/${id}`)
         .expect(404);
     });
-  });
+  describe.only('PATCH',() =>{
+    
+    it('updates data at id, only updates provided fields', () => {
+      const updatedData = {
+        title: 'my New Title',
+        description: 'my new description'
+      };
+
+      const id = 2;
+
+      const expected = {
+        ...testData[1],
+        ...updatedData
+      };
+
+      return supertest(app)
+        .patch(`/api/bookmarks/${id}`)
+        .send(updatedData)
+        .expect(204)
+        .then(() => {
+          return supertest(app)
+            .get(`/api/bookmarks/${id}`)
+            .expect(expected);
+        });
+    });
+
+    it('responds with 404 if no id provided',()=>{
+      const id = 12345;
+
+      const updatedData = {
+        title: 'my New Title',
+        description: 'my new description'
+      };
+
+      return supertest(app)
+        .patch(`/api/bookmarks/${id}`)
+        .send(updatedData)
+        .expect(404);
+    });
+
+    it('responds with 400 if it has no correct fields',()=>{
+      const updatedData = {
+        foo: 'bizz',
+        bar: 'bang'
+      };
+
+      const id = 2;
+
+      const expected = {
+        ...testData[1],
+      };
+
+      return supertest(app)
+        .patch(`/api/bookmarks/${id}`)
+        .send(updatedData)
+        .expect(400)
+        .then(() => {
+          return supertest(app)
+            .get(`/api/bookmarks/${id}`)
+            .expect(expected);
+        });
+    });
+    })
+
+  })
+    
 
   context('table has no data', () => {
     afterEach(() => db('bookmarks').truncate());
@@ -110,25 +178,25 @@ describe('Bookmark Endpoints', () => {
       };
 
       return supertest(app)
-        .post('/bookmarks')
+        .post('/api/bookmarks')
         .send(newBm)
         .expect(201)
         .expect(res => {
-          console.log(res.body);
+
           expect(res.body.title).to.eql(newBm.title);
           expect(res.body.url).to.eql(newBm.url);
           expect(res.body.description).to.eql(newBm.description);
           expect(res.body.rating).to.eql(newBm.rating);
         })
         .then(postRes => {
-          console.log(postRes.body);
+
           return supertest(app)
-            .get(`/bookmarks/${postRes.body.id}`)
+            .get(`/api/bookmarks/${postRes.body.id}`)
             .expect(postRes.body);
         });
     });
 
-    it.only('sanitizes POST', () => {
+    it('sanitizes POST', () => {
       const newBm = {
         title: 'my Test site',
         url: 'https://www.testing123.com',
@@ -137,11 +205,11 @@ describe('Bookmark Endpoints', () => {
       };
 
       return supertest(app)
-        .post('/bookmarks')
+        .post('/api/bookmarks')
         .send(newBm)
         .expect(201)
         .expect(res => {
-          console.log(res.body);
+
           expect(res.body.title).to.eql(newBm.title);
           expect(res.body.url).to.eql(newBm.url);
           expect(res.body.description).to.eql('<img />');
@@ -151,17 +219,15 @@ describe('Bookmark Endpoints', () => {
 
     it('gets [] when table empty', () => {
       return supertest(app)
-        .get('/bookmarks')
+        .get('/api/bookmarks')
         .expect(200, []);
     });
 
     it(' GET returns 404 if id not present', () => {
       const id = 3;
       return supertest(app)
-        .get(`/bookmarks/${id}`)
+        .get(`/api/bookmarks/${id}`)
         .expect(404);
     });
-
-   
   });
 });

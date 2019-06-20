@@ -24,6 +24,12 @@ const BookmarkServices = {
       .insert(newBm)
       .returning('*')
       .then(res=>res[0]);
+  },
+
+  updateBookmark(db, id, updatedData){
+    return db('bookmarks')
+      .where({ id })
+      .update(updatedData);
   }
 };
 
